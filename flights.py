@@ -510,7 +510,10 @@ async def get_time_filtered_flights(state: str, target_time_str: str, origin: st
 
 
 
-if __name__ == "__main__":
-    # Initialize and run the server
+def main():
+    """Main entry point for the Google Flights MCP Server"""
     mcp.run(transport='stdio')
+
+if __name__ == "__main__":
+    main()
 
