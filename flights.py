@@ -4,9 +4,10 @@ import subprocess
 import sys
 import json
 import os
+import asyncio
 from mcp.server.fastmcp import FastMCP
 
-from fast_flights import FlightData, Passengers, Result, get_flights, search_airport
+from fast_flights import FlightData, Passengers, Result, create_filter, get_flights_from_filter, search_airport
 from dataclasses import asdict
 
 from datetime import datetime
@@ -191,16 +192,16 @@ async def get_general_flights_info(origin: str, destination: str, departure_date
     """
 
     if (len(origin) != 3 or len(destination) != 3):
-        return "Origin and destination must be 3 characters."
+        return ["Origin and destination must be 3 characters."]
     
     if (len(departure_date) != 10 or departure_date[4] != '-' or departure_date[7] != '-'):
-        return "Departure date must be in YYYY-MM-DD format."
+        return ["Departure date must be in YYYY-MM-DD format."]
     
     if (trip_type != "one-way" and trip_type != "round-trip"):
-        return "Trip type must be either 'one-way' or 'round-trip'."
+        return ["Trip type must be either 'one-way' or 'round-trip'."]
     
     if (seat != "economy" and seat != "premium-economy" and seat != "business" and seat != "first"):
-        return "Seat type must be either 'economy', 'premium-economy', 'business', or 'first'."
+        return ["Seat type must be either 'economy', 'premium-economy', 'business', or 'first'."]
     
 
     try:
@@ -211,13 +212,15 @@ async def get_general_flights_info(origin: str, destination: str, departure_date
         
         passengers_input = Passengers(adults=adults, children=children, infants_in_seat=infants_in_seat, infants_on_lap=infants_on_lap)
 
-        result: Result = get_flights(
+        # Create filter first, then get flights
+        filter = create_filter(
             flight_data=flight_data_input,
             trip=trip_type,
             seat=seat,
-            passengers=passengers_input,
-            fetch_mode="local"
+            passengers=passengers_input
         )
+        
+        result: Result = await asyncio.to_thread(get_flights_from_filter, filter, mode="local")
         
         result = asdict(result)
         
@@ -282,16 +285,16 @@ async def get_cheapest_flights(origin: str, destination: str, departure_date: st
     """
 
     if (len(origin) != 3 or len(destination) != 3):
-        return "Origin and destination must be 3 characters."
+        return ["Origin and destination must be 3 characters."]
     
     if (len(departure_date) != 10 or departure_date[4] != '-' or departure_date[7] != '-'):
-        return "Departure date must be in YYYY-MM-DD format."
+        return ["Departure date must be in YYYY-MM-DD format."]
     
     if (trip_type != "one-way" and trip_type != "round-trip"):
-        return "Trip type must be either 'one-way' or 'round-trip'."
+        return ["Trip type must be either 'one-way' or 'round-trip'."]
     
     if (seat != "economy" and seat != "premium-economy" and seat != "business" and seat != "first"):
-        return "Seat type must be either 'economy', 'premium-economy', 'business', or 'first'."
+        return ["Seat type must be either 'economy', 'premium-economy', 'business', or 'first'."]
 
     try:
         # Make API call to Google Flights via fast-flights
@@ -299,13 +302,15 @@ async def get_cheapest_flights(origin: str, destination: str, departure_date: st
         flight_data_input = [FlightData(date=departure_date, from_airport=origin, to_airport=destination)]
         passengers_input = Passengers(adults=adults, children=children, infants_in_seat=infants_in_seat, infants_on_lap=infants_on_lap)
 
-        result: Result = get_flights(
+        # Create filter first, then get flights
+        filter = create_filter(
             flight_data=flight_data_input,
             trip=trip_type,
             seat=seat,
-            passengers=passengers_input,
-            fetch_mode="local"
+            passengers=passengers_input
         )
+        
+        result: Result = await asyncio.to_thread(get_flights_from_filter, filter, mode="local")
         
         result = asdict(result)
         
@@ -382,16 +387,16 @@ async def get_best_flights(origin: str, destination: str, departure_date: str,
     """
 
     if (len(origin) != 3 or len(destination) != 3):
-        return "Origin and destination must be 3 characters."
+        return ["Origin and destination must be 3 characters."]
     
     if (len(departure_date) != 10 or departure_date[4] != '-' or departure_date[7] != '-'):
-        return "Departure date must be in YYYY-MM-DD format."
+        return ["Departure date must be in YYYY-MM-DD format."]
     
     if (trip_type != "one-way" and trip_type != "round-trip"):
-        return "Trip type must be either 'one-way' or 'round-trip'."
+        return ["Trip type must be either 'one-way' or 'round-trip'."]
     
     if (seat != "economy" and seat != "premium-economy" and seat != "business" and seat != "first"):
-        return "Seat type must be either 'economy', 'premium-economy', 'business', or 'first'."
+        return ["Seat type must be either 'economy', 'premium-economy', 'business', or 'first'."]
 
     try:
         # Make API call to Google Flights via fast-flights
@@ -400,13 +405,15 @@ async def get_best_flights(origin: str, destination: str, departure_date: str,
 
         passengers_input = Passengers(adults=adults, children=children, infants_in_seat=infants_in_seat, infants_on_lap=infants_on_lap)
 
-        result: Result = get_flights(
+        # Create filter first, then get flights
+        filter = create_filter(
             flight_data=flight_data_input,
             trip=trip_type,
             seat=seat,
-            passengers=passengers_input,
-            fetch_mode="local"
+            passengers=passengers_input
         )
+        
+        result: Result = await asyncio.to_thread(get_flights_from_filter, filter, mode="local")
         
         result = asdict(result)
         
@@ -484,19 +491,19 @@ async def get_time_filtered_flights(state: str, target_time_str: str, origin: st
     """
 
     if (len(origin) != 3 or len(destination) != 3):
-        return "Origin and destination must be 3 characters."
+        return ["Origin and destination must be 3 characters."]
     
     if (len(departure_date) != 10 or departure_date[4] != '-' or departure_date[7] != '-'):
-        return "Departure date must be in YYYY-MM-DD format."
+        return ["Departure date must be in YYYY-MM-DD format."]
     
     if (trip_type != "one-way" and trip_type != "round-trip"):
-        return "Trip type must be either 'one-way' or 'round-trip'."
+        return ["Trip type must be either 'one-way' or 'round-trip'."]
     
     if (seat != "economy" and seat != "premium-economy" and seat != "business" and seat != "first"):
-        return "Seat type must be either 'economy', 'premium-economy', 'business', or 'first'."
+        return ["Seat type must be either 'economy', 'premium-economy', 'business', or 'first'."]
     
     if (state != "before" and state != "after"):
-        return "State must be either 'before' or 'after'."
+        return ["State must be either 'before' or 'after'."]
 
     try:
         # Validate time format first
@@ -512,13 +519,15 @@ async def get_time_filtered_flights(state: str, target_time_str: str, origin: st
 
         passengers_input = Passengers(adults=adults, children=children, infants_in_seat=infants_in_seat, infants_on_lap=infants_on_lap)
 
-        result: Result = get_flights(
+        # Create filter first, then get flights
+        filter = create_filter(
             flight_data=flight_data_input,
             trip=trip_type,
             seat=seat,
-            passengers=passengers_input,
-            fetch_mode="fallback"
+            passengers=passengers_input
         )
+        
+        result: Result = await asyncio.to_thread(get_flights_from_filter, filter, mode="local")
         
         result = asdict(result)
         
