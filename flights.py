@@ -1,5 +1,9 @@
 from typing import Any
 import httpx
+import subprocess
+import sys
+import json
+import os
 from mcp.server.fastmcp import FastMCP
 
 from fast_flights import FlightData, Passengers, Result, get_flights, search_airport
@@ -13,6 +17,77 @@ mcp = FastMCP("flights")
 
 
 # Helper Functions
+
+def ensure_playwright_browsers():
+    """
+    Ensures that Playwright browsers (specifically Chromium) are installed.
+    If not installed, attempts to install them automatically.
+    
+    Returns:
+        bool: True if browsers are available, False otherwise
+    """
+    try:
+        # Check if playwright is available and browsers are installed
+        result = subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "--dry-run", "chromium"],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        # If dry-run succeeds without needing to download, browsers are already installed
+        if result.returncode == 0 and "is already installed" in result.stdout:
+            return True
+            
+        # If browsers need to be installed, install them
+        print("Installing Playwright Chromium browser...")
+        install_result = subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "chromium"],
+            capture_output=True,
+            text=True,
+            timeout=300  # 5 minutes timeout for installation
+        )
+        
+        if install_result.returncode == 0:
+            print("Playwright Chromium browser installed successfully!")
+            return True
+        else:
+            print(f"Failed to install Playwright browsers: {install_result.stderr}")
+            return False
+            
+    except subprocess.TimeoutExpired:
+        print("Timeout occurred while installing Playwright browsers")
+        return False
+    except FileNotFoundError:
+        print("Playwright CLI not found. Make sure playwright is installed.")
+        return False
+    except Exception as e:
+        print(f"Error checking/installing Playwright browsers: {str(e)}")
+        return False
+
+
+def check_playwright_setup():
+    """
+    Checks if Playwright setup is complete and attempts to fix it if not.
+    This function is called before making flight requests.
+    
+    Returns:
+        bool: True if setup is complete, False otherwise
+    """
+    try:
+        # First check if playwright module is available
+        import playwright
+        
+        # Then ensure browsers are installed
+        return ensure_playwright_browsers()
+        
+    except ImportError:
+        print("Playwright is not installed. Please install it with: pip install playwright")
+        return False
+    except Exception as e:
+        print(f"Error during Playwright setup check: {str(e)}")
+        return False
+
 
 def format_flight_info(flight_data, origin_airport, destination_airport):
     """
@@ -141,7 +216,7 @@ async def get_general_flights_info(origin: str, destination: str, departure_date
             trip=trip_type,
             seat=seat,
             passengers=passengers_input,
-            fetch_mode="fallback"
+            fetch_mode="local"
         )
         
         result = asdict(result)
@@ -229,7 +304,7 @@ async def get_cheapest_flights(origin: str, destination: str, departure_date: st
             trip=trip_type,
             seat=seat,
             passengers=passengers_input,
-            fetch_mode="fallback"
+            fetch_mode="local"
         )
         
         result = asdict(result)
@@ -330,7 +405,7 @@ async def get_best_flights(origin: str, destination: str, departure_date: str,
             trip=trip_type,
             seat=seat,
             passengers=passengers_input,
-            fetch_mode="fallback"
+            fetch_mode="local"
         )
         
         result = asdict(result)
