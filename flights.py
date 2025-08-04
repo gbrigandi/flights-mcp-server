@@ -323,15 +323,17 @@ async def get_cheapest_flights(origin: str, destination: str, departure_date: st
             return ["No flights found for the specified route and dates."]
 
         def get_price_value(flight):
-
-            price_str = flight['price']
-
+            price_str = flight.get('price')
+            if not price_str or price_str == 'Price unavailable':
+                return float('inf')
+            
             # Remove $ and any commas from the price string
-            price_str = price_str.replace('$', '')
-            price_str = price_str.replace(',', '')
-
-            # Convert to decimal number
-            return float(price_str)
+            price_str = price_str.replace('$', '').replace(',', '')
+            
+            try:
+                return float(price_str)
+            except (ValueError, TypeError):
+                return float('inf')
 
         price_sorted_flights = sorted(all_flights, key=get_price_value)
 
@@ -600,4 +602,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
